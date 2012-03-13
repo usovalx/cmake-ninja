@@ -331,6 +331,7 @@ cmNinjaTargetGenerator
     depfile = "$out.d";
     cmSystemTools::ReplaceString(depfileFlagsStr, "<DEPFILE>",
                                  depfile.c_str());
+    cmSystemTools::ReplaceString(depfileFlagsStr, "<DEPTARGET>", "$out");
     flags += " " + depfileFlagsStr;
   }
   vars.Flags = flags.c_str();
