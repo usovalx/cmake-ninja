@@ -61,6 +61,7 @@ cmExtraCodeBlocksGenerator::cmExtraCodeBlocksGenerator()
 //  this->SupportedGlobalGenerators.push_back("MSYS Makefiles");
 #endif
   this->SupportedGlobalGenerators.push_back("Unix Makefiles");
+  this->SupportedGlobalGenerators.push_back("Ninja");
 }
 
 
