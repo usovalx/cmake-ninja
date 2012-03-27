@@ -201,22 +201,13 @@ void cmComputeTargetDepends::CollectTargetDepends(int depender_index)
   cmTarget* depender = this->Targets[depender_index];
 
   // Loop over all targets linked directly.
-  {
-  cmTarget::LinkLibraryVectorType const& tlibs =
-    depender->GetOriginalLinkLibraries();
-  std::set<cmStdString> emitted;
-  // A target should not depend on itself.
-  emitted.insert(depender->GetName());
-  for(cmTarget::LinkLibraryVectorType::const_iterator lib = tlibs.begin();
-      lib != tlibs.end(); ++lib)
-    {
-    // Don't emit the same library twice for this target.
-    if(emitted.insert(lib->first).second)
+  if (depender->GetType() != cmTarget::STATIC_LIBRARY)
       {
-      this->AddTargetDepend(depender_index, lib->first.c_str(), true);
+      std::set<cmStdString> emitted;
+      // A target should not depend on itself.
+      emitted.insert(depender->GetName());
+      this->CollectTargetLinkDepends(depender_index, depender->GetOriginalLinkLibraries(), emitted);
       }
-    }
-  }
 
   // Loop over all utility dependencies.
   {
@@ -230,16 +221,33 @@ void cmComputeTargetDepends::CollectTargetDepends(int depender_index)
     // Don't emit the same utility twice for this target.
     if(emitted.insert(*util).second)
       {
-      this->AddTargetDepend(depender_index, util->c_str(), false);
+      this->AddTargetDepend(depender_index, util->c_str(), false, emitted);
       }
     }
   }
 }
 
 //----------------------------------------------------------------------------
+void cmComputeTargetDepends::CollectTargetLinkDepends(int depender_index,
+                                                      cmTarget::LinkLibraryVectorType const& tlibs,
+                                                      std::set<cmStdString>& emitted)
+{
+  for(cmTarget::LinkLibraryVectorType::const_iterator lib = tlibs.begin();
+      lib != tlibs.end(); ++lib)
+    {
+    // Don't emit the same library twice for this target.
+    if(emitted.insert(lib->first).second)
+      {
+      this->AddTargetDepend(depender_index, lib->first.c_str(), true, emitted);
+      }
+    }
+}
+
+//----------------------------------------------------------------------------
 void cmComputeTargetDepends::AddTargetDepend(int depender_index,
                                              const char* dependee_name,
-                                             bool linking)
+                                             bool linking,
+                                             std::set<cmStdString>& emitted)
 {
   // Get the depender.
   cmTarget* depender = this->Targets[depender_index];
@@ -260,14 +268,15 @@ void cmComputeTargetDepends::AddTargetDepend(int depender_index,
 
   if(dependee)
     {
-    this->AddTargetDepend(depender_index, dependee, linking);
+    this->AddTargetDepend(depender_index, dependee, linking, emitted);
     }
 }
 
 //----------------------------------------------------------------------------
 void cmComputeTargetDepends::AddTargetDepend(int depender_index,
                                              cmTarget* dependee,
-                                             bool linking)
+                                             bool linking,
+                                             std::set<cmStdString>& emitted)
 {
   if(dependee->IsImported())
     {
@@ -279,7 +288,7 @@ void cmComputeTargetDepends::AddTargetDepend(int depender_index,
       if(cmTarget* transitive_dependee =
          dependee->GetMakefile()->FindTargetToUse(i->c_str()))
         {
-        this->AddTargetDepend(depender_index, transitive_dependee, false);
+        this->AddTargetDepend(depender_index, transitive_dependee, false, emitted);
         }
       }
     }
@@ -295,6 +304,10 @@ void cmComputeTargetDepends::AddTargetDepend(int depender_index,
     // Add this entry to the dependency graph.
     this->InitialGraph[depender_index].push_back(
       cmGraphEdge(dependee_index, !linking));
+
+    // Follow transitive link dependencies
+    if (dependee->GetType() == cmTarget::STATIC_LIBRARY)
+      this->CollectTargetLinkDepends(depender_index, dependee->GetOriginalLinkLibraries(), emitted);
     }
 }
 

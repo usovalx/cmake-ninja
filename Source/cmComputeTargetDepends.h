@@ -13,6 +13,7 @@
 #define cmComputeTargetDepends_h
 
 #include "cmStandardIncludes.h"
+#include "cmTarget.h"
 
 #include "cmGraphAdjacencyList.h"
 
@@ -44,9 +45,13 @@ private:
   void CollectTargets();
   void CollectDepends();
   void CollectTargetDepends(int depender_index);
+  void CollectTargetLinkDepends(int depender_index,
+                                cmTarget::LinkLibraryVectorType const& tlibs,
+                                std::set<cmStdString>& emitted);
   void AddTargetDepend(int depender_index, const char* dependee_name,
-                       bool linking);
-  void AddTargetDepend(int depender_index, cmTarget* dependee, bool linking);
+                       bool linking, std::set<cmStdString>& emitted);
+  void AddTargetDepend(int depender_index, cmTarget* dependee,
+                       bool linking, std::set<cmStdString>& emitted);
   bool ComputeFinalDepends(cmComputeComponentGraph const& ccg);
 
   cmGlobalGenerator* GlobalGenerator;
